@@ -53,7 +53,7 @@ func main() {
 
 	db.AutoMigrate(&Account{}, &Instance{}) //Migrate schemas if needed
 	instance := Instance{Domain: localInstance}
-	db.Create(&instance) // Add instance entry (do nothing if it exists)
+	db.FirstOrCreate(&instance) // Add instance entry (do nothing if it exists)
 
 	// launch stream listener
 	ctx := context.Background()
@@ -76,7 +76,6 @@ func main() {
 		var account mastodon.Account
 		switch e := evt.(type) {
 		case *mastodon.NotificationEvent:
-			fmt.Printf("%+v\n", e.Notification)
 			account = e.Notification.Account
 		case *mastodon.UpdateEvent:
 			account = e.Status.Account
