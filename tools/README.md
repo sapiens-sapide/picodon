@@ -1,6 +1,6 @@
 ### Accounts explorator
 
-A bot that monitors some instances public feeds to grab all users seen and traverses their relationships.  
+A bot that monitors some instances public feeds to grab all users seen and traverse their relationships.  
 
 Feed a postgresql db with data collected : accounts, instances, followers, following...  
 
