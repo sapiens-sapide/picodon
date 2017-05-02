@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sapiens-sapide/go-mastodon"
@@ -41,10 +42,11 @@ func main() {
 	backend.DB.Where("is_registered = true").Find(&nstncs)
 
 	for _, nstnc := range nstncs {
-		var err error
 		ctx := context.Background()
+		var err error
+		var app *mastodon.Application
 		if !nstnc.Is_authorized {
-			app, err := mastodon.RegisterApp(ctx, &mastodon.AppConfig{
+			app, err = mastodon.RegisterApp(ctx, &mastodon.AppConfig{
 				Server:     "https://" + nstnc.Domain,
 				ClientName: "concierge-bot",
 				Scopes:     "read write follow",
@@ -54,6 +56,8 @@ func main() {
 				nstnc.APIsecret = app.ClientSecret
 				nstnc.Is_authorized = true
 				backend.SaveInstance(nstnc)
+			} else {
+				fmt.Println(err)
 			}
 		}
 		if err == nil {
