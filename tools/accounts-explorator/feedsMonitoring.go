@@ -2,13 +2,9 @@ package accounts_explorator
 
 import (
 	"fmt"
-	"log"
 	"github.com/sapiens-sapide/go-mastodon"
-
-	"github.com/jinzhu/gorm"
+	"log"
 )
-
-
 
 // Connect to Instance's public feed via websocket
 // and save all unknown usernames seen.
@@ -46,13 +42,22 @@ func (iw *InstanceWorker) MonitorPublicFeed() {
 				fmt.Printf("error : %s\n", err)
 				continue
 			}
-			acct := Account {
-				Model: gorm.Model{ID: uint(acc.ID)},
+			acct := Account{
 				Username: user,
 				Instance: instance,
 			}
-			iw.Backend.SaveAccount(acct)
-			iw.Backend.SaveInstance(Instance{Domain: instance})
+			if instance != iw.Instance.Domain {
+				id, err := GetRemoteAccountID(user, instance)
+				if err == nil {
+					acct.ID = uint(id)
+				}
+			} else {
+				acct.ID = uint(acc.ID)
+			}
+			if acct.ID != 0 {
+				iw.Backend.CreateAccountIfNotExist(acct)
+			}
+			iw.Backend.CreateInstanceIfNotExist(Instance{Domain: instance})
 		}
 	}
 }

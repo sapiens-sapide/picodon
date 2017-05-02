@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/sapiens-sapide/go-mastodon"
 	. "github.com/sapiens-sapide/picodon/tools/accounts-explorator"
 	"log"
 	"os"
 	"os/signal"
-	"github.com/sapiens-sapide/go-mastodon"
 )
 
 const postgres = "localhost"
@@ -45,9 +45,9 @@ func main() {
 		ctx := context.Background()
 		if !nstnc.Is_authorized {
 			app, err := mastodon.RegisterApp(ctx, &mastodon.AppConfig{
-				Server: "https://" + nstnc.Domain,
+				Server:     "https://" + nstnc.Domain,
 				ClientName: "concierge-bot",
-				Scopes: "read write follow",
+				Scopes:     "read write follow",
 			})
 			if err == nil {
 				nstnc.APIid = app.ClientID
@@ -58,8 +58,8 @@ func main() {
 		}
 		if err == nil {
 			instances[nstnc.Domain] = &InstanceWorker{
-				Backend: &backend,
-				Context: context.Background(),
+				Backend:  &backend,
+				Context:  ctx,
 				Instance: nstnc,
 			}
 		}

@@ -1,7 +1,12 @@
 package accounts_explorator
 
 import (
+	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -23,4 +28,58 @@ func splitUserAndInstance(acct, localInstance string) (user, instance string, er
 		err = errors.New("invalid string")
 		return
 	}
+}
+
+func GetRemoteAccountID(username, instance string) (id int, err error) {
+	const webfingerService = ".well-known/webfinger"
+	u := url.URL{
+		Scheme:   "https",
+		Host:     instance,
+		Path:     webfingerService,
+		RawQuery: "resource=acct%3A" + username + "%40" + instance,
+	}
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	var payload webfinger
+	json.Unmarshal(body, &payload)
+	var p []string
+	for _, link := range payload.Links {
+		if link.Rel == "salmon" {
+			u, err := url.Parse(link.Href)
+			if err != nil {
+				return 0, err
+			}
+			p = strings.Split(u.Path, "/")
+		}
+	}
+	l := len(p)
+	if l == 4 && p[l-1] != "" {
+		id, err = strconv.Atoi(p[l-1])
+		if err != nil {
+			return 0, err
+		}
+		return
+	} else {
+		return 0, errors.New("empty response")
+	}
+
+}
+
+type webfinger struct {
+	Subject string
+	Aliases []string
+	Links   []Link
+}
+
+type Link struct {
+	Rel  string
+	Type string
+	Href string
 }

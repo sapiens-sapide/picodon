@@ -2,7 +2,6 @@ package accounts_explorator
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
 	"github.com/sapiens-sapide/go-mastodon"
 	"log"
 	"time"
@@ -27,18 +26,23 @@ func (iw *InstanceWorker) ScanUsers() {
 		for _, account := range accounts {
 			followers, err := c.GetAccountFollowers(iw.Context, int64(account.ID))
 			if err != nil {
-				log.Printf("[ScanInstanceUsers] error when getting followers for account %d : %s", account.ID, err)
+				log.Printf("[ScanInstanceUsers] error when getting followers for account %d@%s : %s", account.ID, iw.Instance.Domain, err)
+				time.Sleep(2 * time.Second) // to prevent throttling
+
 			} else {
 				account.LocalFollowers, account.RemoteFollowers = iw.iterateAccounts(account.ID, followers)
 			}
 			followings, err := c.GetAccountFollowing(iw.Context, int64(account.ID))
 			if err != nil {
-				log.Printf("[ScanInstanceUsers] error when getting followings for account %d : %s", account.ID, err)
+				log.Printf("[ScanInstanceUsers] error when getting followings for account %d@%s : %s", account.ID, iw.Instance.Domain, err)
+				time.Sleep(2 * time.Second) // to prevent throttling
 			} else {
 				account.LocalFollowings, account.RemoteFollowings = iw.iterateAccounts(account.ID, followings)
 			}
-			account.LastScan = time.Now()
-			iw.Backend.SaveAccount(account)
+			if err == nil {
+				account.LastScan = time.Now()
+				iw.Backend.SaveAccount(account)
+			}
 		}
 
 		time.Sleep(5 * time.Minute)
@@ -53,12 +57,21 @@ func (iw *InstanceWorker) iterateAccounts(accountID uint, accts []*mastodon.Acco
 			continue
 		}
 		acct := Account{
-			Model:    gorm.Model{ID: uint(mastodonAcct.ID)},
 			Username: user,
 			Instance: instance,
 		}
-		iw.Backend.SaveAccount(acct)
-		iw.Backend.SaveInstance(Instance{Domain: instance})
+		if instance != iw.Instance.Domain {
+			id, err := GetRemoteAccountID(user, instance)
+			if err == nil {
+				acct.ID = uint(id)
+			}
+		} else {
+			acct.ID = uint(mastodonAcct.ID)
+		}
+		if acct.ID != 0 {
+			iw.Backend.CreateAccountIfNotExist(acct)
+		}
+		iw.Backend.CreateInstanceIfNotExist(Instance{Domain: instance})
 		if instance == iw.Instance.Domain {
 			local++
 		} else {

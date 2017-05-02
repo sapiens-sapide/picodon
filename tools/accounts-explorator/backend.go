@@ -6,6 +6,8 @@ import (
 )
 
 type Backend interface {
+	CreateInstanceIfNotExist(i Instance) error
+	CreateAccountIfNotExist(a Account) error
 	SaveAccount(Account) error
 	SaveInstance(Instance) error
 	FindAccountsToScan(inst *Instance) (accts []Account, err error)
@@ -15,13 +17,23 @@ type PsqlDB struct {
 	DB *gorm.DB
 }
 
-// create or update account
+func (p *PsqlDB) CreateAccountIfNotExist(a Account) error {
+	p.DB.FirstOrCreate(&Account{}, a)
+	return nil
+}
+
+func (p *PsqlDB) CreateInstanceIfNotExist(i Instance) error {
+	p.DB.FirstOrCreate(&Instance{}, i)
+	return nil
+}
+
+// update account
 func (p *PsqlDB) SaveAccount(a Account) error {
 	p.DB.Where("id = ? AND instance = ?", a.ID, a.Instance).Assign(a).FirstOrCreate(&a)
 	return nil
 }
 
-// create or update instance
+// update instance
 func (p *PsqlDB) SaveInstance(i Instance) error {
 	p.DB.Where("domain = ?", i.Domain).Assign(i).FirstOrCreate(&i)
 	return nil
