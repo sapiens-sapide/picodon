@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"github.com/sapiens-sapide/go-mastodon"
 )
 
 const postgres = "localhost"
@@ -35,19 +36,40 @@ func main() {
 	backend.DB.AutoMigrate(&Account{}, &Instance{}) //Migrate schemas if needed
 
 	// instances to monitor
-	instances := make(map[string]*Instance)
+	instances := make(map[string]*InstanceWorker)
 	nstncs := []Instance{}
-	backend.DB.Where("is_registred = true AND is_authorized = true").Find(&nstncs)
+	backend.DB.Where("is_registered = true").Find(&nstncs)
+
 	for _, nstnc := range nstncs {
-		instances[nstnc.Domain] = &nstnc
+		var err error
+		ctx := context.Background()
+		if !nstnc.Is_authorized {
+			app, err := mastodon.RegisterApp(ctx, &mastodon.AppConfig{
+				Server: "https://" + nstnc.Domain,
+				ClientName: "concierge-bot",
+				Scopes: "read write follow",
+			})
+			if err == nil {
+				nstnc.APIid = app.ClientID
+				nstnc.APIsecret = app.ClientSecret
+				nstnc.Is_authorized = true
+				backend.SaveInstance(nstnc)
+			}
+		}
+		if err == nil {
+			instances[nstnc.Domain] = &InstanceWorker{
+				Backend: &backend,
+				Context: context.Background(),
+				Instance: nstnc,
+			}
+		}
 	}
 
 	// launch instances workers
 	// TODO: manage workers start/stop/resume
-	ctx := context.Background()
-	for _, instance := range instances {
-		go instance.MonitorPublicFeed(ctx, &backend)
-		go instance.ScanUsers(ctx, &backend)
+	for _, worker := range instances {
+		go worker.MonitorPublicFeed()
+		go worker.ScanUsers()
 	}
 
 	c := make(chan os.Signal, 1)

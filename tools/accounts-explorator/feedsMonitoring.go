@@ -2,7 +2,6 @@ package accounts_explorator
 
 import (
 	"fmt"
-	"context"
 	"log"
 	"github.com/sapiens-sapide/go-mastodon"
 
@@ -13,23 +12,23 @@ import (
 
 // Connect to Instance's public feed via websocket
 // and save all unknown usernames seen.
-func (inst *Instance) MonitorPublicFeed(ctx context.Context, bck Backend) {
-	fmt.Printf("starting MonitorPublicFeed worker for %s\n", inst.Domain)
+func (iw *InstanceWorker) MonitorPublicFeed() {
+	fmt.Printf("starting MonitorPublicFeed worker for %s\n", iw.Instance.Domain)
 	c := mastodon.NewClient(&mastodon.Config{
-		Server:       "https://" + inst.Domain,
-		ClientID:     inst.APIid,
-		ClientSecret: inst.APIsecret,
+		Server:       "https://" + iw.Instance.Domain,
+		ClientID:     iw.Instance.APIid,
+		ClientSecret: iw.Instance.APIsecret,
 	})
 	// Loop to reconnect if connection closed
 	for {
-		err := c.Authenticate(ctx, inst.Username, inst.Password)
+		err := c.Authenticate(iw.Context, iw.Instance.Username, iw.Instance.Password)
 		if err != nil {
-			log.Printf("[MonitorInstanceFeed] : auth against instance %s failed with error : %s\n", inst.Domain, err)
+			log.Printf("[MonitorInstanceFeed] : auth against instance %s failed with error : %s\n", iw.Instance.Domain, err)
 			return
 		}
 
 		wsClient := c.NewWSClient()
-		publicStream, _ := wsClient.StreamingWSPublic(ctx, true)
+		publicStream, _ := wsClient.StreamingWSPublic(iw.Context, true)
 
 		for evt := range publicStream {
 			var acc mastodon.Account
@@ -42,7 +41,7 @@ func (inst *Instance) MonitorPublicFeed(ctx context.Context, bck Backend) {
 				continue
 			}
 
-			user, instance, err := splitUserAndInstance(acc.Acct, inst.Domain)
+			user, instance, err := splitUserAndInstance(acc.Acct, iw.Instance.Domain)
 			if err != nil {
 				fmt.Printf("error : %s\n", err)
 				continue
@@ -52,8 +51,8 @@ func (inst *Instance) MonitorPublicFeed(ctx context.Context, bck Backend) {
 				Username: user,
 				Instance: instance,
 			}
-			bck.SaveAccount(acct)
-			bck.SaveInstance(Instance{Domain: instance})
+			iw.Backend.SaveAccount(acct)
+			iw.Backend.SaveInstance(Instance{Domain: instance})
 		}
 	}
 }

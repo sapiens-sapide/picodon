@@ -1,6 +1,7 @@
 package accounts_explorator
 
 import (
+	"context"
 	"github.com/jinzhu/gorm"
 	"time"
 )
@@ -26,11 +27,12 @@ type Instance struct {
 	Password      string
 	APIid         string
 	APIsecret     string
-	Is_registered  bool // whether an account is created in the instance
+	Is_registered bool // whether an account is created in the instance
 	Is_authorized bool // whether an API key/secret has been gained from instance
 }
 
 type InstanceWorker struct {
 	Backend  Backend
+	Context  context.Context
 	Instance Instance
 }
