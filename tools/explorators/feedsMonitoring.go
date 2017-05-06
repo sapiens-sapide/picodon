@@ -1,4 +1,4 @@
-package accounts_explorator
+package explorators
 
 import (
 	"fmt"

@@ -6,7 +6,7 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sapiens-sapide/go-mastodon"
-	. "github.com/sapiens-sapide/picodon/tools/accounts-explorator"
+	. "github.com/sapiens-sapide/picodon/tools/explorators"
 	"log"
 	"os"
 	"os/signal"
@@ -76,6 +76,7 @@ func main() {
 		go worker.ScanUsers()
 	}
 
+	go InstancesUsersCount(&backend)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	//block until a signal is received
