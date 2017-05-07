@@ -16,21 +16,24 @@ func InstancesUsersCount(b Backend) {
 			wg := new(sync.WaitGroup)
 			workers_count := 0
 			for _, instance := range instances {
-				if workers_count > 50 {
+				if workers_count > 500 {
 					wg.Wait()
+					workers_count = 0
+				} else {
+					workers_count++
 				}
 				wg.Add(1)
-				go func(instance Instance, wg *sync.WaitGroup) {
-					users_count, err := getInstanceUsersCount(instance.Domain)
+				go func(inst Instance, wg *sync.WaitGroup) {
+					users_count, err := getInstanceUsersCount(inst.Domain)
 					if err == nil {
-						instance.Users_count = uint(users_count)
-						instance.Last_count = time.Now()
-						instance.Last_count_failed = false
+						inst.UsersCount = uint(users_count)
+						inst.LastCount = time.Now()
+						inst.CountFailed = false
 					} else {
-						instance.Last_count_failed = true
+						inst.CountFailed = true
 					}
-					b.SaveInstance(instance)
-					wg.Add(-1)
+					b.SaveInstance(inst)
+					wg.Done()
 				}(instance, wg)
 			}
 		}
@@ -39,10 +42,16 @@ func InstancesUsersCount(b Backend) {
 }
 
 func getInstanceUsersCount(instance string) (int, error) {
-	client := http.Client{Timeout: time.Second * 5}
+	client := http.Client{
+		Timeout: time.Second * 5,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// request has been redirected, don't try to get a user_count from the wrong hostname
+			return http.ErrAbortHandler
+		},
+	}
 	resp, err := client.Get("https://" + instance + "/about/more")
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	defer resp.Body.Close()
 	moreDOM := html.NewTokenizer(resp.Body)

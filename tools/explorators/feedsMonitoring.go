@@ -58,6 +58,13 @@ func (iw *InstanceWorker) MonitorPublicFeed() {
 				iw.Backend.CreateAccountIfNotExist(acct)
 			}
 			iw.Backend.CreateInstanceIfNotExist(Instance{Domain: instance})
+			// need to subhub to instance's local feed if it is a new one
 		}
 	}
 }
+
+/*
+get public instance timeline
+parse json to retreive a list of users' accounts belonging to the instance
+save accounts
+*/

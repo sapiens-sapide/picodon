@@ -72,6 +72,7 @@ func (iw *InstanceWorker) iterateAccounts(accountID uint, accts []*mastodon.Acco
 			iw.Backend.CreateAccountIfNotExist(acct)
 		}
 		iw.Backend.CreateInstanceIfNotExist(Instance{Domain: instance})
+		// need to subhub to instance's local feed if it is a new one
 		if instance == iw.Instance.Domain {
 			local++
 		} else {
