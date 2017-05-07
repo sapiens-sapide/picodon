@@ -8,8 +8,10 @@ Feed a postgresql db with data collected : accounts, instances, followers, follo
 _This is an experimental software that I use to discover how Mastodon network works._
 
 #### TODO :
- * [] Fetch the `/about/more` page from listed instances to count declared accounts.
+ * [] manage redirection when discovering/counting instances
+ * [] monitor all public feeds of instances in db, either by websocket or pubsubhubbub
  * [] handle http/ws errors
+ * [] remove accounts from db if a not found error was returned
  * [] fix stream error: stream ID 1; REFUSED_STREAM coming from nginx proxy
  * [] compute and send daily stats
  * [] automatic registration on new instance discovered

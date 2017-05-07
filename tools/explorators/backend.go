@@ -30,13 +30,17 @@ func (p *PsqlDB) CreateInstanceIfNotExist(i Instance) error {
 
 // update account
 func (p *PsqlDB) SaveAccount(a Account) error {
-	p.DB.Where("id = ? AND instance = ?", a.ID, a.Instance).Assign(a).FirstOrCreate(&a)
+	var acct Account
+	p.DB.Where("id = ? AND instance = ?", a.ID, a.Instance).FirstOrCreate(&acct)
+	p.DB.Model(&acct).Save(a)
 	return nil
 }
 
 // update instance
 func (p *PsqlDB) SaveInstance(i Instance) error {
-	p.DB.Where("domain = ?", i.Domain).Assign(i).FirstOrCreate(&i)
+	var inst Instance
+	p.DB.Where("domain = ?", i.Domain).FirstOrCreate(&inst)
+	p.DB.Model(&inst).Save(i)
 	return nil
 }
 
@@ -48,6 +52,6 @@ func (p *PsqlDB) FindAccountsToScan(inst *Instance) (accts []Account, err error)
 
 func (p *PsqlDB) FindInstancesToScan() (instances []Instance, err error) {
 	aDayAgo := time.Now().Add(-24 * time.Hour)
-	p.DB.Where("last_count isnull OR last_count < ? or last_count_failed = true", aDayAgo).Find(&instances)
+	p.DB.Where("last_count isnull OR last_count < ? OR count_failed = true OR users_count = 0", aDayAgo).Find(&instances)
 	return
 }

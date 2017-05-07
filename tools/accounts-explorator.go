@@ -45,7 +45,7 @@ func main() {
 		ctx := context.Background()
 		var err error
 		var app *mastodon.Application
-		if !nstnc.Is_authorized {
+		if !nstnc.IsAuthorized {
 			app, err = mastodon.RegisterApp(ctx, &mastodon.AppConfig{
 				Server:     "https://" + nstnc.Domain,
 				ClientName: "concierge-bot",
@@ -54,7 +54,7 @@ func main() {
 			if err == nil {
 				nstnc.APIid = app.ClientID
 				nstnc.APIsecret = app.ClientSecret
-				nstnc.Is_authorized = true
+				nstnc.IsAuthorized = true
 				backend.SaveInstance(nstnc)
 			} else {
 				fmt.Println(err)
@@ -71,11 +71,16 @@ func main() {
 
 	// launch instances workers
 	// TODO: manage workers start/stop/resume
+
 	for _, worker := range instances {
 		go worker.MonitorPublicFeed()
 		go worker.ScanUsers()
 	}
-
+	/*
+		TODO :connect to authorized instances
+		TODO :subhub to other instances
+		TODO :better output handling
+	*/
 	go InstancesUsersCount(&backend)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

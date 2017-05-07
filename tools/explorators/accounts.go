@@ -22,7 +22,7 @@ func splitUserAndInstance(acct, localInstance string) (user, instance string, er
 	case 1:
 		s := strings.Split(acct, addrSep)
 		user = s[0]
-		instance = s[1]
+		instance = strings.ToLower(s[1])
 		return
 	default:
 		err = errors.New("invalid string")
