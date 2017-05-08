@@ -8,7 +8,9 @@ import (
 
 // our model for a mastodon user account
 type Account struct {
-	gorm.Model
+	ID               uint `gorm:"primary_key"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 	Username         string
 	Instance         string    `gorm:"primary_key"`
 	LastScan         time.Time // last time our worker scanned account's relationships

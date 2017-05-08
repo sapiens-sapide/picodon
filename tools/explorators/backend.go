@@ -12,6 +12,7 @@ type Backend interface {
 	SaveInstance(Instance) error
 	FindAccountsToScan(inst *Instance) (accts []Account, err error)
 	FindInstancesToScan() (instances []Instance, err error)
+	RemoveAccount(Account) error
 }
 
 type PsqlDB struct {
@@ -33,6 +34,13 @@ func (p *PsqlDB) SaveAccount(a Account) error {
 	var acct Account
 	p.DB.Where("id = ? AND instance = ?", a.ID, a.Instance).FirstOrCreate(&acct)
 	p.DB.Model(&acct).Save(a)
+	return nil
+}
+
+func (p *PsqlDB) RemoveAccount(a Account) error {
+	if a.ID != 0 && a.Instance != "" {
+		p.DB.Delete(&a)
+	}
 	return nil
 }
 

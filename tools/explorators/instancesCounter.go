@@ -16,7 +16,7 @@ func InstancesUsersCount(b Backend) {
 			wg := new(sync.WaitGroup)
 			workers_count := 0
 			for _, instance := range instances {
-				if workers_count > 500 {
+				if workers_count > 100 { // do not consume all pg connectors
 					wg.Wait()
 					workers_count = 0
 				} else {
