@@ -36,6 +36,7 @@ func (iw *InstanceWorker) ScanUsers() {
 					break loopAccounts
 				case 404: // not found
 					iw.Backend.RemoveAccount(account)
+					continue loopAccounts
 				case 429: // throttled
 					break loopAccounts
 				default:
@@ -53,6 +54,7 @@ func (iw *InstanceWorker) ScanUsers() {
 					break loopAccounts
 				case 404: // not found
 					iw.Backend.RemoveAccount(account)
+					continue loopAccounts
 				case 429: // throttled
 					break loopAccounts
 				default:
