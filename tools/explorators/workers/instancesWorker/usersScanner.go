@@ -24,6 +24,8 @@ func (iw *InstanceWorker) ScanUsers() {
 		err := c.Authenticate(iw.Context, iw.Instance.Username, iw.Instance.Password)
 		if err != nil {
 			log.Printf("[ScanInstanceUsers] : auth against instance %s failed with error : %s", iw.Instance.Domain, err)
+			time.Sleep(6 * time.Minute)
+			continue
 		}
 		accounts, err := iw.Backend.FindAccountsToScan(&(iw.Instance))
 	loopAccounts:

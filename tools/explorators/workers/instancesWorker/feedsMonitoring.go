@@ -67,8 +67,8 @@ func (iw *InstanceWorker) APILocalFeedMonitoring() {
 	for {
 		resp, err := http.Get(u.String())
 		if err == nil {
-			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
+			resp.Body.Close()
 			if err == nil {
 				var statuses []mastodon.Status
 				if err = json.Unmarshal(body, &statuses); err == nil {

@@ -42,8 +42,8 @@ func GetRemoteAccountID(username, instance string) (id int, err error) {
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
 		return
 	}

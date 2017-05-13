@@ -26,6 +26,8 @@ func main() {
 
 	// db jobs
 	backend.DB, err = gorm.Open("postgres", "host="+postgres+" dbname="+pgsqlDB+" user="+pgsqlUser+" sslmode=disable")
+	backend.DB.DB().SetMaxIdleConns(10)
+	backend.DB.DB().SetMaxOpenConns(1000)
 	if err != nil {
 		log.Fatalf("DB opening failed with error : %s", err)
 	}
