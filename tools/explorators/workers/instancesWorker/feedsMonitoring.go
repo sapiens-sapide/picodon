@@ -72,18 +72,22 @@ func (iw *InstanceWorker) APILocalFeedMonitoring() {
 			if err == nil {
 				var statuses []mastodon.Status
 				if err = json.Unmarshal(body, &statuses); err == nil {
-					oldest := time.Now()
-					most_recent := time.Now()
-					for _, status := range statuses {
-						iw.SaveIfUnknown(status.Account)
-						if status.CreatedAt.After(most_recent) {
-							most_recent = status.CreatedAt
+					if len(statuses) > 10 { // don't lose time with sleeping instances…
+						oldest := time.Now()
+						most_recent := time.Now()
+						for _, status := range statuses {
+							iw.SaveIfUnknown(status.Account)
+							if status.CreatedAt.After(most_recent) {
+								most_recent = status.CreatedAt
+							}
+							if status.CreatedAt.Before(oldest) {
+								oldest = status.CreatedAt
+							}
 						}
-						if status.CreatedAt.Before(oldest) {
-							oldest = status.CreatedAt
-						}
+						timeFrame = most_recent.Sub(oldest)
+					} else {
+						timeFrame = 17 * time.Hour
 					}
-					timeFrame = most_recent.Sub(oldest)
 				}
 			}
 		}
