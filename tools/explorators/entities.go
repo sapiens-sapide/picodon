@@ -33,9 +33,3 @@ type Instance struct {
 	LastCount    time.Time // last time a user_count was obtained from instance's API
 	CountFailed  bool      // whether last try to get user_count was successfull
 }
-
-type InstanceWorker struct {
-	Backend  Backend
-	Context  context.Context
-	Instance Instance
-}

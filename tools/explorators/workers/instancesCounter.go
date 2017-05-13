@@ -1,6 +1,7 @@
-package explorators
+package workers
 
 import (
+	expl "github.com/sapiens-sapide/picodon/tools/explorators"
 	"golang.org/x/net/html"
 	"net/http"
 	"strconv"
@@ -9,7 +10,7 @@ import (
 	"time"
 )
 
-func InstancesUsersCount(b Backend) {
+func InstancesUsersCount(b expl.Backend) {
 	for {
 		instances, err := b.FindInstancesToScan()
 		if err == nil {
@@ -23,7 +24,7 @@ func InstancesUsersCount(b Backend) {
 					workers_count++
 				}
 				wg.Add(1)
-				go func(inst Instance, wg *sync.WaitGroup) {
+				go func(inst expl.Instance, wg *sync.WaitGroup) {
 					users_count, err := getInstanceUsersCount(inst.Domain)
 					if err == nil {
 						inst.UsersCount = uint(users_count)
@@ -37,7 +38,7 @@ func InstancesUsersCount(b Backend) {
 				}(instance, wg)
 			}
 		}
-		time.Sleep(3 * time.Hour)
+		time.Sleep(45 * time.Minute)
 	}
 }
 
@@ -66,25 +67,22 @@ func getInstanceUsersCount(instance string) (int, error) {
 			t := moreDOM.Token()
 			if t.Data == "div" {
 				for _, attr := range t.Attr {
-					if attr.Key == "class" {
-						if attr.Val == "information-board" {
-							for {
+					if attr.Key == "class" && attr.Val == "information-board" {
+						for {
+							moreDOM.Next()
+							infoToken := moreDOM.Token()
+							if infoToken.Data == "strong" {
 								moreDOM.Next()
-								infoToken := moreDOM.Token()
-								if infoToken.Data == "strong" {
-									moreDOM.Next()
-									user_count := string(moreDOM.Text())
-									user_count = strings.Replace(user_count, ",", "", -1)
-									user_count = strings.Replace(user_count, ".", "", -1)
-									user_count = strings.Replace(user_count, " ", "", -1)
-									return strconv.Atoi(user_count)
-								}
+								user_count := string(moreDOM.Text())
+								user_count = strings.Replace(user_count, ",", "", -1)
+								user_count = strings.Replace(user_count, ".", "", -1)
+								user_count = strings.Replace(user_count, " ", "", -1)
+								return strconv.Atoi(user_count)
 							}
 						}
 					}
 				}
 			}
-
 		}
 	}
 }

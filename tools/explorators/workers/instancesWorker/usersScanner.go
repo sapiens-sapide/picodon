@@ -1,4 +1,4 @@
-package explorators
+package instancesWorker
 
 import (
 	"fmt"
@@ -74,29 +74,9 @@ func (iw *InstanceWorker) ScanUsers() {
 
 func (iw *InstanceWorker) iterateAccounts(accountID uint, accts []*mastodon.Account) (local, remote uint) {
 	for _, mastodonAcct := range accts {
-		user, instance, err := splitUserAndInstance(mastodonAcct.Acct, iw.Instance.Domain)
-		if err != nil {
-			fmt.Printf("error : %s\n", err)
-			continue
-		}
-		acct := Account{
-			Username: user,
-			Instance: instance,
-		}
-		if instance != iw.Instance.Domain {
-			id, err := GetRemoteAccountID(user, instance)
-			if err == nil {
-				acct.ID = uint(id)
-			}
-		} else {
-			acct.ID = uint(mastodonAcct.ID)
-		}
-		if acct.ID != 0 {
-			iw.Backend.CreateAccountIfNotExist(acct)
-		}
-		iw.Backend.CreateInstanceIfNotExist(Instance{Domain: instance})
+		acct, _, _ := iw.SaveIfUnknown(mastodonAcct)
 		// need to subhub to instance's local feed if it is a new one
-		if instance == iw.Instance.Domain {
+		if acct.Instance == iw.Instance.Domain {
 			local++
 		} else {
 			remote++

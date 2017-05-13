@@ -53,13 +53,13 @@ func (p *PsqlDB) SaveInstance(i Instance) error {
 }
 
 func (p *PsqlDB) FindAccountsToScan(inst *Instance) (accts []Account, err error) {
-	aWeekAgo := time.Now().Add(-(7 * 24 * time.Hour))
+	aWeekAgo := time.Now().Add(-(2 * 24 * time.Hour))
 	p.DB.Where("last_scan isnull OR last_scan < ? and instance = ?", aWeekAgo, inst.Domain).Find(&accts)
 	return
 }
 
 func (p *PsqlDB) FindInstancesToScan() (instances []Instance, err error) {
-	aDayAgo := time.Now().Add(-24 * time.Hour)
+	aDayAgo := time.Now().Add(-1 * time.Hour)
 	p.DB.Where("last_count isnull OR last_count < ? OR count_failed = true OR users_count = 0", aDayAgo).Find(&instances)
 	return
 }

@@ -12,7 +12,7 @@ import (
 
 const addrSep = "@"
 
-func splitUserAndInstance(acct, localInstance string) (user, instance string, err error) {
+func SplitUserAndInstance(acct, localInstance string) (user, instance string, err error) {
 	switch strings.Count(acct, addrSep) {
 	case 0:
 		//a local user

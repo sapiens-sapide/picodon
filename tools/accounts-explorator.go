@@ -7,6 +7,8 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sapiens-sapide/go-mastodon"
 	. "github.com/sapiens-sapide/picodon/tools/explorators"
+	w "github.com/sapiens-sapide/picodon/tools/explorators/workers"
+	iw "github.com/sapiens-sapide/picodon/tools/explorators/workers/instancesWorker"
 	"log"
 	"os"
 	"os/signal"
@@ -37,15 +39,16 @@ func main() {
 	backend.DB.AutoMigrate(&Account{}, &Instance{}) //Migrate schemas if needed
 
 	// instances to monitor
-	instances := make(map[string]*InstanceWorker)
+	instances := make(map[string]*iw.InstanceWorker)
 	nstncs := []Instance{}
-	backend.DB.Where("is_registered = true").Find(&nstncs)
-
+	// retreive all known instances that were up within last hour
+	backend.DB.Where("count_failed = false").Find(&nstncs)
 	for _, nstnc := range nstncs {
 		ctx := context.Background()
 		var err error
 		var app *mastodon.Application
-		if !nstnc.IsAuthorized {
+		// Get auth token if missing
+		if nstnc.IsRegistered && !nstnc.IsAuthorized {
 			app, err = mastodon.RegisterApp(ctx, &mastodon.AppConfig{
 				Server:     "https://" + nstnc.Domain,
 				ClientName: "concierge-bot",
@@ -60,12 +63,10 @@ func main() {
 				fmt.Println(err)
 			}
 		}
-		if err == nil {
-			instances[nstnc.Domain] = &InstanceWorker{
-				Backend:  &backend,
-				Context:  ctx,
-				Instance: nstnc,
-			}
+		instances[nstnc.Domain] = &iw.InstanceWorker{
+			Backend:  &backend,
+			Context:  ctx,
+			Instance: nstnc,
 		}
 	}
 
@@ -81,7 +82,7 @@ func main() {
 		TODO :subhub to other instances
 		TODO :better output handling
 	*/
-	go InstancesUsersCount(&backend)
+	go w.InstancesUsersCount(&backend)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	//block until a signal is received
