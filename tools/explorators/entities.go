@@ -1,7 +1,6 @@
 package explorators
 
 import (
-	"context"
 	"github.com/jinzhu/gorm"
 	"time"
 )

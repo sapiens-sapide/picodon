@@ -74,7 +74,7 @@ func (iw *InstanceWorker) ScanUsers() {
 
 func (iw *InstanceWorker) iterateAccounts(accountID uint, accts []*mastodon.Account) (local, remote uint) {
 	for _, mastodonAcct := range accts {
-		acct, _, _ := iw.SaveIfUnknown(mastodonAcct)
+		acct, _, _ := iw.SaveIfUnknown(*mastodonAcct)
 		// need to subhub to instance's local feed if it is a new one
 		if acct.Instance == iw.Instance.Domain {
 			local++

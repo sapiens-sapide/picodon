@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 )
 
 const postgres = "localhost"
@@ -39,7 +40,7 @@ func main() {
 	backend.DB.AutoMigrate(&Account{}, &Instance{}) //Migrate schemas if needed
 
 	// instances to monitor
-	instances := make(map[string]*iw.InstanceWorker)
+	InstancesWorkers := make(map[string]*iw.InstanceWorker)
 	nstncs := []Instance{}
 	// retreive all known instances that were up within last hour
 	backend.DB.Where("count_failed = false").Find(&nstncs)
@@ -63,19 +64,40 @@ func main() {
 				fmt.Println(err)
 			}
 		}
-		instances[nstnc.Domain] = &iw.InstanceWorker{
-			Backend:  &backend,
-			Context:  ctx,
-			Instance: nstnc,
+		InstancesWorkers[nstnc.Domain] = &iw.InstanceWorker{
+			Backend:       &backend,
+			Context:       ctx,
+			Instance:      nstnc,
+			SeenLock:      new(sync.Mutex),
+			AccountsSeen:  make(map[string]bool),
+			InstancesSeen: make(map[string]bool),
+			IsWSConnected: false,
 		}
 	}
 
 	// launch instances workers
 	// TODO: manage workers start/stop/resume
+	/*
+		every hour :
+			- retreive 'up' instances list from db
+			- cancel workers for instances not retreived
+			- for each instance :
+				check if there is a worker currently running
+				if not => create one
+				if yes => check if connection is possible
+					if yes => check if connected
+						if not => try to connect
+			if connection possible : try to connect via WS
+			if connection failed or not possible : launch API fetcher
+	*/
 
-	for _, worker := range instances {
-		go worker.MonitorPublicFeed()
-		go worker.ScanUsers()
+	for _, worker := range InstancesWorkers {
+		if worker.Instance.IsAuthorized {
+			go worker.WSLocalFeedMonitoring()
+			go worker.ScanUsers()
+		} else {
+			go worker.APILocalFeedMonitoring()
+		}
 	}
 	/*
 		TODO :connect to authorized instances

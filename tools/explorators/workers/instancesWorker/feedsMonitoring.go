@@ -1,10 +1,14 @@
 package instancesWorker
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/sapiens-sapide/go-mastodon"
-	expl "github.com/sapiens-sapide/picodon/tools/explorators"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
+	"time"
 )
 
 // Connect to Instance's local feed via websocket
@@ -53,34 +57,49 @@ func (iw *InstanceWorker) WSLocalFeedMonitoring() {
 // and save all unknown usernames and instances seen
 func (iw *InstanceWorker) APILocalFeedMonitoring() {
 	fmt.Printf("starting local feed API monitoring for %s\n", iw.Instance.Domain)
-}
-
-func (iw *InstanceWorker) SaveIfUnknown(acc mastodon.Account) (acct expl.Account, NewAccount, NewInstance bool) {
-	//TODO: optimize lookup by maintaining in-memory accounts and instances tables
-	user, instance, err := expl.SplitUserAndInstance(acc.Acct, iw.Instance.Domain)
-	if err != nil {
-		fmt.Printf("error : %s\n", err)
-		return
+	var timeFrame time.Duration
+	u := url.URL{
+		Scheme:   "https",
+		Host:     iw.Instance.Domain,
+		Path:     "/api/v1/timelines/public",
+		RawQuery: "local=true&limit=50",
 	}
-	acct = expl.Account{
-		Username: user,
-		Instance: instance,
-	}
-	if instance != iw.Instance.Domain {
-		id, err := expl.GetRemoteAccountID(user, instance)
+	for {
+		resp, err := http.Get(u.String())
 		if err == nil {
-			acct.ID = uint(id)
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err == nil {
+				var statuses []mastodon.Status
+				if err = json.Unmarshal(body, &statuses); err == nil {
+					oldest := time.Now()
+					most_recent := time.Now()
+					for _, status := range statuses {
+						iw.SaveIfUnknown(status.Account)
+						if status.CreatedAt.After(most_recent) {
+							most_recent = status.CreatedAt
+						}
+						if status.CreatedAt.Before(oldest) {
+							oldest = status.CreatedAt
+						}
+					}
+					timeFrame = most_recent.Sub(oldest)
+				}
+			}
 		}
-	} else {
-		acct.ID = uint(acc.ID)
+		timeFrame = time.Duration(float64(timeFrame) * 0.75)
+		if timeFrame > (12 * time.Hour) {
+			timeFrame = 12 * time.Hour
+		}
+		time.Sleep(timeFrame)
 	}
-	if acct.ID != 0 {
-		iw.Backend.CreateAccountIfNotExist(acct)
-	}
-	iw.Backend.CreateInstanceIfNotExist(expl.Instance{Domain: instance})
-
-	//TODO: feedback newaccount&newinstance
-	return
+	/*
+		- fetch json from instance's URL
+		- partially unmarshal json to retrieve toots' id and accounts
+		- lookup worker's toots map
+		- if toot not found, add it to worker's map and launch 'SaveIfUnknown' func
+		- cleanup vars (json, etc.)
+	*/
 }
 
 /*
