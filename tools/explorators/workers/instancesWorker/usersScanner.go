@@ -21,11 +21,24 @@ func (iw *InstanceWorker) ScanUsers() {
 		ClientSecret: iw.Instance.APIsecret,
 	})
 	for {
-		err := c.Authenticate(iw.Context, iw.Instance.Username, iw.Instance.Password)
+		var err error
+	authLoop:
+		for i := 0; i < 10; i++ {
+			err = c.Authenticate(iw.Context, iw.Instance.Username, iw.Instance.Password)
+			if err != nil {
+				log.Printf("[ScanInstanceUsers] : auth against instance %s failed with error : %s\n", iw.Instance.Domain, err)
+				time.Sleep(10 * time.Minute)
+			} else {
+				break authLoop
+			}
+		}
 		if err != nil {
-			log.Printf("[ScanInstanceUsers] : auth against instance %s failed with error : %s", iw.Instance.Domain, err)
-			time.Sleep(6 * time.Minute)
-			continue
+			//TODO: fallback to fetch timeline monitoring
+			iw.Instance.IsAuthorized = false
+			iw.Instance.APIid = ""
+			iw.Instance.APIsecret = ""
+			iw.Backend.SaveInstance(iw.Instance)
+			return
 		}
 		accounts, err := iw.Backend.FindAccountsToScan(&(iw.Instance))
 	loopAccounts:

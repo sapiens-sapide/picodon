@@ -22,9 +22,18 @@ func (iw *InstanceWorker) WSLocalFeedMonitoring() {
 	})
 	// Loop to reconnect if connection closed
 	for {
-		err := c.Authenticate(iw.Context, iw.Instance.Username, iw.Instance.Password)
+		var err error
+	authLoop:
+		for i := 0; i < 10; i++ {
+			err = c.Authenticate(iw.Context, iw.Instance.Username, iw.Instance.Password)
+			if err != nil {
+				log.Printf("[MonitorInstanceFeed] : auth against instance %s failed with error : %s\n", iw.Instance.Domain, err)
+				time.Sleep(10 * time.Minute)
+			} else {
+				break authLoop
+			}
+		}
 		if err != nil {
-			log.Printf("[MonitorInstanceFeed] : auth against instance %s failed with error : %s\n", iw.Instance.Domain, err)
 			//TODO: fallback to fetch timeline monitoring
 			iw.Instance.IsAuthorized = false
 			iw.Instance.APIid = ""
@@ -32,7 +41,6 @@ func (iw *InstanceWorker) WSLocalFeedMonitoring() {
 			iw.Backend.SaveInstance(iw.Instance)
 			return
 		}
-
 		wsClient := c.NewWSClient()
 		publicStream, _ := wsClient.StreamingWSPublic(iw.Context, true)
 
